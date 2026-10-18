@@ -160,68 +160,45 @@ function itemKey(year, name) {
 
 var root = document.getElementById("root");
 var sideCount = 0;
+var list = document.createElement("ol");
+list.className = "steps";
+root.appendChild(list);
 Object.keys(DATA).forEach(function (year) {
   var rows = DATA[year].split("\n");
-  var byMonth = [];
   rows.forEach(function (line) {
     var parts = line.split(" ; ");
-    var date = parts[0];
-    var mon = date.slice(0, 3);
-    var last = byMonth[byMonth.length - 1];
-    if (!last || last.mon !== mon) { last = { mon: mon, rows: [] }; byMonth.push(last); }
-    last.rows.push(parts);
-  });
-
-  var sec = document.createElement("section");
-  sec.className = "year";
-  sec.innerHTML = '<div class="year-head"><h2>' + year + '</h2><span class="yc" id="yc' + year + '"></span></div>';
-  byMonth.forEach(function (m) {
-    var mEl = document.createElement("div");
-    mEl.className = "month";
-    var label = document.createElement("div");
-    label.className = "mlabel";
-    label.textContent = m.mon;
-    var ol = document.createElement("ol");
-    ol.className = "steps";
-    m.rows.forEach(function (parts) {
-      var n = steps.length + 1;
-      var itemMarkup = "", sides = "";
-      parts.slice(1).forEach(function (raw) {
-        if (raw.charAt(0) === "S") {
-          var f = raw.split("|");
-          sideCount += 1;
-          var sid = sideCount;
-          sides += '<div class="side" data-filter="side" data-sid="' + sid + '"><label><input type="checkbox" id="side' + sid + '" aria-label="Mark side story ' + esc(f[1]) + ' done"><span class="sn">' + esc(f[1]) + '</span><span class="tag side">Optional Side Story</span></label><span class="sw">' + esc(f[2]) + '</span></div>';
-        } else {
-          ITEM_TOTAL += 1;
-          var fields = raw.split("|");
-          var key = itemKey(year, fields[1]);
-          var legacyId = fields[1] === "Chocolate, Please!" ? 0 : ++LEGACY_ITEM_TOTAL;
-          if (legacyDone[n] || previousDoneItems[key]) migratedDoneItems[key] = 1;
-          itemMarkup += itemHtml(raw, key, ITEM_TOTAL, legacyId);
-        }
-      });
-      var li = document.createElement("li");
-      li.className = "step";
-      li.id = "step" + n;
-      li.innerHTML =
-        '<div class="body">' + itemMarkup + sides + '</div>';
-      ol.appendChild(li);
-      steps.push({ n: n, year: year, el: li });
-      li.querySelectorAll(".it[data-itemid]").forEach(function (el) {
-        contentItems.push({
-          id: el.getAttribute("data-itemid"),
-          legacyId: Number(el.getAttribute("data-legacyid")),
-          year: year,
-          el: el
-        });
+    var n = steps.length + 1;
+    var itemMarkup = "", sides = "";
+    parts.slice(1).forEach(function (raw) {
+      if (raw.charAt(0) === "S") {
+        var f = raw.split("|");
+        sideCount += 1;
+        var sid = sideCount;
+        sides += '<div class="side" data-filter="side" data-sid="' + sid + '"><label><input type="checkbox" id="side' + sid + '" aria-label="Mark side story ' + esc(f[1]) + ' done"><span class="sn">' + esc(f[1]) + '</span><span class="tag side">Optional Side Story</span></label><span class="sw">' + esc(f[2]) + '</span></div>';
+      } else {
+        ITEM_TOTAL += 1;
+        var fields = raw.split("|");
+        var key = itemKey(year, fields[1]);
+        var legacyId = fields[1] === "Chocolate, Please!" ? 0 : ++LEGACY_ITEM_TOTAL;
+        if (legacyDone[n] || previousDoneItems[key]) migratedDoneItems[key] = 1;
+        itemMarkup += itemHtml(raw, key, ITEM_TOTAL, legacyId);
+      }
+    });
+    var li = document.createElement("li");
+    li.className = "step";
+    li.id = "step" + n;
+    li.innerHTML = '<div class="body">' + itemMarkup + sides + '</div>';
+    list.appendChild(li);
+    steps.push({ n: n, year: year, el: li });
+    li.querySelectorAll(".it[data-itemid]").forEach(function (el) {
+      contentItems.push({
+        id: el.getAttribute("data-itemid"),
+        legacyId: Number(el.getAttribute("data-legacyid")),
+        year: year,
+        el: el
       });
     });
-    mEl.appendChild(label);
-    mEl.appendChild(ol);
-    sec.appendChild(mEl);
   });
-  root.appendChild(sec);
 });
 
 var personaItem = contentItems.find(function (item) { return item.el.querySelector(".nm").textContent === "Persona on Frontline"; });
@@ -306,12 +283,6 @@ function refresh() {
     });
     step.hidden = !hasVisibleContent;
   });
-  document.querySelectorAll(".month").forEach(function (month) {
-    month.hidden = !month.querySelector(".step:not([hidden])");
-  });
-  document.querySelectorAll(".year").forEach(function (year) {
-    year.hidden = !year.querySelector(".month:not([hidden])");
-  });
   var nx = firstOpen();
   if (nx) {
     nx.el.classList.add("next");
@@ -327,13 +298,8 @@ function refresh() {
   else if (!nx) nl.textContent = "No unfinished items match the selected filters.";
   else {
     var title = nx.el.querySelector(".nm, .sn").textContent;
-    nl.textContent = "Next: item " + nx.number + ", " + title + ", " + nx.year;
+    nl.textContent = "Next: " + title;
   }
-  Object.keys(DATA).forEach(function (y) {
-    var inY = countedItems.filter(function (item) { return item.year === y; });
-    var dn = inY.filter(function (item) { return item.side ? state.side[item.id] : state.doneItems[item.id]; }).length;
-    document.getElementById("yc" + y).textContent = dn + " / " + inY.length + " done";
-  });
 }
 
 root.addEventListener("change", function (e) {
